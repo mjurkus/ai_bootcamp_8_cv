@@ -54,9 +54,8 @@ class BaseLearner(ABC):
             callbacks=[
                 keras.callbacks.ReduceLROnPlateau(factor=0.3, patience=reduce_lr_patience),
                 keras.callbacks.EarlyStopping(patience=early_stopping_patience, restore_best_weights=True),
-                CustomLogger()
             ],
-            verbose=2,
+            verbose=1,
         )
 
 
@@ -84,7 +83,7 @@ class ImageLearner(BaseLearner):
         x = keras.layers.Dense(
             self.n_classes,
             kernel_regularizer=keras.regularizers.l1_l2(l1, l2),
-            activation=keras.activations.softmax,
+            activation=keras.activations.sigmoid,
         )(x)
 
         self.model = keras.Model(inputs=self.base_model.inputs, outputs=x)
