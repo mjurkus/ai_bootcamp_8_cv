@@ -1,3 +1,4 @@
+import shutil
 from abc import ABC
 from pathlib import Path
 from typing import Tuple, Any, List
@@ -5,7 +6,6 @@ from typing import Tuple, Any, List
 import pandas as pd
 from tensorflow import keras
 
-from callbacks import CustomLogger
 from data import DataContainer
 
 
@@ -13,12 +13,12 @@ class BaseLearner(ABC):
     model: keras.Model
     history: keras.callbacks.History
 
-    def __init__(self, path: Path, data: DataContainer) -> None:
+    def __init__(self, model_path: Path, data: DataContainer) -> None:
         self.data = data
-        self.path = path
-        self.weights_path = self.path / 'weights.h5'
-        self.architecture_path = self.path / 'model.json'
-        self.logs_path = self.path / 'logs'
+        self.model_path = model_path
+        self.weights_path = self.model_path / 'weights.h5'
+        self.architecture_path = self.model_path / 'model.json'
+        self.logs_path = self.model_path / 'logs'
 
     def save(self) -> None:
         self.model.save_weights(str(self.weights_path))
@@ -61,10 +61,18 @@ class BaseLearner(ABC):
 
 class ImageLearner(BaseLearner):
 
-    def __init__(self, path: Path, data: DataContainer, base_model: Any, input_shape: Tuple[int, int, int],
-                 dropout: float = 0.0, l1: float = 1e-8, l2: float = 1e-8, override: bool = False,
-                 load: bool = False) -> None:
-        super().__init__(path, data)
+    def __init__(self,
+                 model_path: Path,
+                 data: DataContainer,
+                 base_model: Any,
+                 input_shape: Tuple[int, int, int],
+                 dropout: float = 0.0,
+                 l1: float = 1e-8,
+                 l2: float = 1e-8,
+                 override: bool = False,
+                 load: bool = False
+                 ) -> None:
+        super().__init__(model_path, data)
         self.n_classes = data.train.n_classes
         self.input_shape = input_shape
         self.dropout = dropout
@@ -88,14 +96,18 @@ class ImageLearner(BaseLearner):
 
         self.model = keras.Model(inputs=self.base_model.inputs, outputs=x)
 
-        if self.path.exists():
+        if self.model_path.exists():
             if load:
                 self.load()
             elif override:
-                self.path.rmdir()
-                self.path.mkdir(parents=True, exist_ok=True)
+                try:
+                    shutil.rmtree(str(model_path))
+                except OSError as err:
+                    print(f"Error while deleting {model_path} directory. {err}")
+
+                self.model_path.mkdir(parents=True, exist_ok=True)
         else:
-            self.path.mkdir(parents=True, exist_ok=True)
+            self.model_path.mkdir(parents=True, exist_ok=True)
 
         self.save()
 
