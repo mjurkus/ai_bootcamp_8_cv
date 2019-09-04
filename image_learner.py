@@ -57,6 +57,7 @@ class BaseLearner(ABC):
             validation_steps=self.data.validation.steps,
             epochs=epochs,
             callbacks=[
+                keras.callbacks.ModelCheckpoint(str(self.weights_path), save_best_only=True, save_weights_only=True),
                 keras.callbacks.ReduceLROnPlateau(factor=0.3, patience=reduce_lr_patience),
                 keras.callbacks.EarlyStopping(patience=early_stopping_patience, restore_best_weights=True),
             ],
