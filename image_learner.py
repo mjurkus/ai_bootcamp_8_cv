@@ -3,6 +3,7 @@ from abc import ABC
 from pathlib import Path
 from typing import Tuple, Any, List
 
+import numpy as np
 import pandas as pd
 from tensorflow import keras
 
@@ -27,12 +28,16 @@ class BaseLearner(ABC):
 
     def load(self, weights_only: bool = False) -> None:
         if weights_only:
+            print(f'Loading weights only from {self.weights_path}')
             self.model.load_weights(str(self.weights_path))
         else:
+            print(f'Loading architecture and weights from {self.model_path}')
             with open(str(self.architecture_path), "r") as f:
                 self.model = keras.models.model_from_json(f.read())
 
             self.model.load_weights(str(self.weights_path))
+
+        print('Model loaded successfully')
 
     def compile(self, optimizer: Any, lr: float, loss: Any, metrics: Any) -> None:
         raise NotImplementedError()
@@ -58,6 +63,14 @@ class BaseLearner(ABC):
             verbose=1,
         )
 
+    def predict_dataset(self, mode: str = 'validation', verbose: int = 0) -> np.ndarray:
+        dataset = getattr(self.data, mode)
+        return self.model.predict(dataset.data, steps=dataset.steps, verbose=verbose)
+
+    def evaluate_dataset(self, mode: str = 'validation', verbose: int = 0) -> np.ndarray:
+        dataset = getattr(self.data, mode)
+        return self.model.evaluate(dataset.data, steps=dataset.steps, verbose=verbose)
+
 
 class ImageLearner(BaseLearner):
 
@@ -70,7 +83,7 @@ class ImageLearner(BaseLearner):
                  l1: float = 1e-8,
                  l2: float = 1e-8,
                  override: bool = False,
-                 load: bool = False
+                 load: bool = True
                  ) -> None:
         super().__init__(model_path, data)
         self.n_classes = data.train.n_classes
@@ -97,6 +110,7 @@ class ImageLearner(BaseLearner):
         self.model = keras.Model(inputs=self.base_model.inputs, outputs=x)
 
         if self.model_path.exists():
+            print('Existing model data path exists')
             if load:
                 self.load()
             elif override:
